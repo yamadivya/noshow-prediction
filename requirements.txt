@@ -1,1 +1,21 @@
+# Core data and ML
+pandas
+numpy
+pyarrow
+scikit-learn
+lightgbm
+shap
 
+# Visualization
+matplotlib
+seaborn
+
+# Config and utilities
+pyyaml
+
+# Testing and code quality
+pytest
+ruff
+
+# Notebooks
+jupyter
