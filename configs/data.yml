@@ -1,1 +1,8 @@
-
+hotel:
+  raw_path: "data/raw/hotel_bookings.csv"
+  processed_path: "data/processed/hotel_snapshots.parquet"
+  snapshots_days: [7, 1]
+  split:
+    train_end: "2016-09-30"
+    val_end: "2017-02-28"
+    # test: everything after val_end
