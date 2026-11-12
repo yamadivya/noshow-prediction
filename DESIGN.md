@@ -8,47 +8,52 @@ For each booking still active at a given snapshot before departure, predict whet
 
 ## 2. Prediction Snapshots
 
-Predictions are made at fixed points before departure. Each snapshot has its own feature set, because information becomes available over time.
+| Snapshot | Time before arrival/departure | Track A (hotel, real) | Track B (airline, simulated) |
+|---|---|---|---|
+| S1 | 7 days | Booking attributes, customer history | Same, plus booking and itinerary data |
+| S2 | 1 day | Same as S1 (daily granularity only) | Adds check-in status and timing |
+| S3 | 3 hours | Not available (no timestamps) | Adds latest check-in, seat selection, bag drop |
 
-| Snapshot | Hours to departure | Information available |
-|---|---|---|
-| S1 | 168 (T-7d) | Booking attributes, itinerary, passenger history. Online check-in is not yet open. |
-| S2 | 24 (T-24h) | Everything in S1, plus check-in status and timing so far. |
-| S3 | 3 (T-3h) | Everything in S2, plus latest check-in, seat selection and bag drop events. |
+**Point-in-time rule:** a feature may use an event only if `event_time <= snapshot_time`. Enforced by unit tests.
 
-**Point-in-time rule:** a feature may use an event only if `event_time <= snapshot_time`. This rule is enforced by unit tests in Week 2.
+The hotel data has daily granularity and no check-in signal, so Track A uses S1 and S2 only. Check-in snapshots exist only in the simulated airline track.
 
 ## 3. Population and Target Definition
 
-**Population at each snapshot:** bookings that are still active (not cancelled before that snapshot).
+**Population at snapshot k:** bookings still active at k days before arrival, meaning `lead_time >= k` and not cancelled earlier than k days before arrival.
 
 **Target (3 classes), measured after the snapshot:**
-- `boarded`: the passenger boarded the flight.
-- `no_show`: the passenger held an active booking at departure but did not board.
-- `cancelled_after_snapshot`: the passenger cancelled between the snapshot and departure.
+- `showed` (hotel: Check-Out; airline: boarded)
+- `no_show`
+- `cancelled_after_snapshot`
 
-**Consequences:**
-- The population shrinks as departure approaches, so the class mix differs by snapshot. At S3, cancellations are rare and no-shows are a larger share of non-boarders.
-- Models are evaluated per snapshot, never pooled.
+Cancellation timing is reconstructed from `reservation_status_date`. Bookings cancelled before the snapshot are excluded because that outcome is already known.
 
-**Why not collapse cancellations into one class?** Cancellations made before the snapshot are already known at prediction time, so they are not something to predict. Only cancellations that happen after the snapshot are genuinely uncertain. Including earlier ones would leak known information into the target.
+## Leakage Audit (Track A)
 
-**Worked example (S2, T-24h):** a passenger booked 30 days ago, with no cancellation so far, appears in the S2 table. Their features use only events up to T-24h. If they cancel at T-10h, the label is `cancelled_after_snapshot`. If they cancel at T-30h, they do not appear in S2 at all. **(your call: replace with an example from your own simulated data once Day 3 is done.)**
+| Column | Decision | Reason |
+|---|---|---|
+| `is_canceled`, `reservation_status` | Drop | They are the target |
+| `reservation_status_date` | Use only to build labels and snapshots | Records the outcome date |
+| `assigned_room_type` | Drop | Assigned at or near check-in |
+| `booking_changes` | Drop | Final count includes changes after the snapshot |
+| `required_car_parking_spaces`, `total_of_special_requests` | Drop or test as sensitivity | Final state, may be updated after the snapshot |
+| `days_in_waiting_list` | Review | Possible post-booking information |
+| `deposit_type` | Keep, with a sensitivity run | Legitimate at booking time, but Non Refund is near-deterministic with cancellation, which looks like a data artifact |
+| `country` | Drop | Nationality proxy, excluded by responsible-use policy |
+| `agent`, `company` | Review | High cardinality, use time-aware encoding |
 
 ## 4. Data Split
 
-Temporal split by **flight departure date**, not booking date:
+Temporal split by **arrival date** (the dataset spans roughly July 2015 to August 2017; verify in the audit):
 
-| Set | Departure dates |
+| Set | Arrival dates |
 |---|---|
-| Train | 2023-01-01 to 2023-08-31 |
-| Validation | 2023-09-01 to 2023-10-31 |
-| Test | 2023-11-01 to 2023-12-31 |
+| Train | 2015-07-01 to 2016-09-30 |
+| Validation | 2016-10-01 to 2017-02-28 |
+| Test | 2017-03-01 to 2017-08-31 |
 
-Rules:
-- The test set is not touched until model selection is final (end of Week 3).
-- A passenger can appear in several periods. Historical features for a given row use only flights departing before that row's departure.
-- Target encodings and any fitted preprocessing are fit on training data only, with time-aware folds.
+The test window covers a full spring and summer season, so it also measures seasonal shift. Test data is untouched until model selection is final.
 
 ## 5. Metrics
 
@@ -103,9 +108,11 @@ Decision thresholds are chosen by minimizing expected cost, not by defaulting to
 
 ## 9. Data and Limitations
 
-Real passenger booking records are proprietary, so this project uses a **simulator** built on real flight schedules from the US BTS On-Time Performance dataset. Booking behavior, no-show and cancellation outcomes are generated from documented assumptions in `configs/sim.yaml` and the simulator code. A model trained on this data learns the simulator's rules, so results demonstrate the methodology (leakage control, calibration, cost-based decisions, responsible deployment), not real-world performance.
+**Track A (real):** Hotel Booking Demand dataset (Antonio, Almeida & Nunes, 2019; CC BY 4.0), about 119,000 bookings from two Portuguese hotels. It is a different domain from airlines and has no check-in signal. No-shows are about 1% of bookings, so imbalance handling matters.
 
-The Kaggle Hotel Booking Demand dataset is used as a secondary check that the pipeline behaves sensibly on real booking behavior.
+**Track B (simulated):** Real BTS flight schedules with simulated bookings and check-in events, built from documented assumptions in `configs/sim.yaml`. Used only to demonstrate flight-level aggregation, check-in snapshots and an overbooking simulation. Results from Track B illustrate method, not real performance.
+
+**At an airline,** both tracks would be replaced by PNR and DCS data. Involuntary non-boardings (missed connections, disruption rebooks, denied boarding) would be excluded from the no-show label.
 
 ## 10. Open Questions
 
