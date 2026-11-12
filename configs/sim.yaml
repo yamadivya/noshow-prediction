@@ -1,1 +1,31 @@
+# Simulator configuration
+# Placeholders for now; the values get refined on Day 3.
 
+seed: 42
+
+# Simulation window (departure dates)
+start_date: "2023-01-01"
+end_date: "2023-12-31"
+
+# Population
+n_passengers: 200000
+
+# Target outcome rates for the overall dataset.
+# boarded is whatever remains (1 - no_show - cancelled).
+target_rates:
+  no_show: 0.05
+  cancelled: 0.10
+
+# Prediction snapshots, in hours before departure
+snapshots_hours: [168, 24, 3]
+
+# Temporal split by flight departure date
+split:
+  train_end: "2023-08-31"
+  val_end: "2023-10-31"
+  # test: everything after val_end
+
+# Real data inputs (downloaded manually on Day 2)
+paths:
+  bts_raw: "data/raw/bts/"
+  output: "data/processed/bookings.parquet"
