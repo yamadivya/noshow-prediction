@@ -1,1 +1,26 @@
+# Cost assumptions for threshold selection and business simulation.
+# All values are in abstract "cost units". The structure matters more
+# than the exact numbers; vary them in a sensitivity analysis in Week 4.
 
+costs:
+  # Cost of sending a reminder or check-in nudge to a passenger
+  # who did not need it (false alarm).
+  unnecessary_message: 1
+
+  # Cost of an empty seat caused by a no-show that was not forecast.
+  missed_no_show: 50
+
+benefits:
+  # Value gained when a contacted at-risk passenger responds and
+  # the seat is saved or released in time to resell.
+  saved_seat: 20
+
+# Assumed probability that a contacted passenger actually responds
+# to the message. Used in the outreach lift simulation.
+outreach_response_rate: 0.30
+
+# Sensitivity analysis ranges for Week 4
+sensitivity:
+  missed_no_show: [20, 50, 100]
+  unnecessary_message: [0.5, 1, 2]
+  outreach_response_rate: [0.10, 0.30, 0.50]
