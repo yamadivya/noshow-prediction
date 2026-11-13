@@ -98,3 +98,27 @@ Snapshot = bookings still active k days before arrival (`lead_time >= k` and not
 | 4 | `deposit_type` | Keep with sensitivity run (with and without) | Planned |
 | 5 | `booking_changes`, `assigned_room_type` | Drop. Cancel rate 39.8% vs ~10-27% (changes) and 40.6% vs 4.0% (room match) shows they leak the outcome | **Final** |
 | 6 | Metric noise | About 1,010 no-shows after dedup; bootstrap confidence intervals on no-show PR-AUC | Planned |
+
+
+## Day 3: Snapshot table and temporal split
+
+**Data:** Real (hotel), deduplicated, one anomalous no-show dropped (87,395 rows).
+**Code:** `src/data/hotel.py`, `src/features/snapshots.py`, `tests/test_snapshots.py`.
+**Split:** train to 2016-09-30, validation to 2017-02-28, test after.
+
+| Snapshot | Split | Rows | Showed | No-show | Cancelled after | No-show rate |
+|---|---|---|---|---|---|---|
+| 7-day | train | 26,859 | 24,864 | 421 | 1,574 | 1.57% |
+| 7-day | val | 9,257 | 8,605 | 126 | 526 | 1.36% |
+| 7-day | test | 14,899 | 14,180 | 175 | 544 | 1.17% |
+| 1-day | train | 31,817 | 30,717 | 551 | 549 | 1.73% |
+| 1-day | val | 11,289 | 10,925 | 168 | 196 | 1.49% |
+| 1-day | test | 16,508 | 16,104 | 205 | 199 | 1.24% |
+
+Totals: 7-day 51,015 rows, 1-day 59,614 rows.
+
+> Findings:
+> - One No-Show recorded 111 days before arrival was dropped as a data error.
+> - The no-show rate declines from train to test at both snapshots, so expect over-prediction on test and check calibration there.
+> - Validation and test hold only 126 to 205 no-shows each; report bootstrap confidence intervals.
+> - The cancelled-after rate also drops in test (7-day: 5.86% to 3.65%). Cause not yet investigated.
