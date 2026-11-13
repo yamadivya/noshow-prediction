@@ -92,9 +92,9 @@ Snapshot = bookings still active k days before arrival (`lead_time >= k` and not
 
 | # | Item | Decision | Status |
 |---|---|---|---|
-| 1 | Duplicates | Drop exact duplicates for modeling; compare class rates before and after | **Provisional**, verify with the before/after cell |
+| 1 | Duplicates | Drop exact duplicates (119,390 to 87,396 rows). Cancel rate falls 36.03% to 26.33%, no-show rises 1.01% to 1.16% | **Final** |
 | 2 | Date anomalies | None found; no rule needed. Inspect the one no-show with a 111-day gap | Open (minor) |
-| 3 | Snapshot sizes | S1 = 63,093 rows, S2 = 71,539 rows (pre-dedup); recompute after dedup | Recompute |
+| 3 | Snapshot sizes | Recompute on deduplicated data | Pending cell 4 above |
 | 4 | `deposit_type` | Keep with sensitivity run (with and without) | Planned |
-| 5 | `booking_changes`, room-match | Probes not yet run | Open |
-| 6 | Metric noise | Bootstrap confidence intervals on no-show PR-AUC | Planned |
+| 5 | `booking_changes`, `assigned_room_type` | Drop. Cancel rate 39.8% vs ~10-27% (changes) and 40.6% vs 4.0% (room match) shows they leak the outcome | **Final** |
+| 6 | Metric noise | About 1,010 no-shows after dedup; bootstrap confidence intervals on no-show PR-AUC | Planned |
